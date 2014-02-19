@@ -1,13 +1,13 @@
+require_relative 'database_rewinder/safe_load_railtie'
 require_relative 'database_rewinder/cleaner'
-require_relative 'database_rewinder/railtie'
 
 module DatabaseRewinder
   VERSION = Gem.loaded_specs['database_rewinder'].version.to_s
 
   class << self
-    def init
-      @cleaners, @table_names_cache, @clean_all, @only, @except = [], {}, false
-      @db_config = YAML::load(ERB.new(Rails.root.join('config/database.yml').read).result)
+    def init(root)
+      @root, @cleaners, @table_names_cache, @clean_all, @only, @except = root, [], {}, false
+      @db_config = YAML::load(ERB.new(File.open(File.join(@root, 'config/database.yml')).read).result)
     end
 
     def create_cleaner(connection_name)
@@ -38,7 +38,7 @@ module DatabaseRewinder
       database = config[:database]
       cleaner = cleaners.detect do |c|
         if (config[:adapter] == 'sqlite3') && (config[:database] != ':memory:')
-          File.expand_path(c.db, Rails.root) == File.expand_path(database, Rails.root)
+          File.expand_path(c.db, @root) == File.expand_path(database, @root)
         else
           c.db == database
         end
